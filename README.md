@@ -1,2 +1,2 @@
 # dell-fan-control
-Replace bash fancontrol by python script
+Replace bash fancontrol with python script
