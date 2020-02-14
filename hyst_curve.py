@@ -25,14 +25,14 @@ class HystSpeedCurve:
         self.__cur_speed = speeds[0]
 
     def calculate_speed(self, temp):
-        zone_index = self.__get_temp_zone(temp)
+        zone_index = self.__calc_temp_zone(temp)
         speed = self.__speeds[zone_index]
         if speed != self.__cur_speed:
             self.__cur_speed = speed
             self.__update_transitions(zone_index)
         return speed
 
-    def __get_temp_zone(self, temp):
+    def __calc_temp_zone(self, temp):
         index = 0
         for transition in self.__transitions:
             if transition.value > temp:
@@ -53,7 +53,7 @@ if __name__ == '__main__':
 
     curve = HystSpeedCurve([LOW_SPEED, MED_SPEED, HIGH_SPEED], [50, 60], HYSTERESIS_GAP)
 
-    temps = [49, 50, 51, 49, 59, 60, 59, 61]
+    temps = [49, 60, 55, 49, 59, 60, 59, 44]
     print([curve.calculate_speed(temp) for temp in temps])
 
     temps = [61, 55, 54, 50, 49, 45, 44 ,43]
