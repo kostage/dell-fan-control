@@ -6,21 +6,34 @@ import sys
 import time
 import threading
 
+from hyst_curve import HystSpeedCurve
+
+LOW_SPEED = 0
+MED_SPEED = 128
+HIGH_SPEED = 255
+HYSTERESIS_GAP = 5
 
 FANS = [
     '/sys/class/hwmon/hwmon3/pwm1',
     '/sys/class/hwmon/hwmon3/pwm2'
 ]
 
-TEMP_CURVES = [
-    [42, 60],
-    [42, 55]
+TEMP_TRANSITIONS = [
+    [45, 60],
+    [50, 65]
+]
+
+SPEEDS = [
+    LOW_SPEED,
+    MED_SPEED,
+    HIGH_SPEED
 ]
 
 TS = '/sys/class/hwmon/hwmon1/temp1_input'
 
+
 class AveragingFilter:
-    def __init__(self, order, init_value = 0):
+    def __init__(self, order, init_value=0):
         self.__order = order
         self.__cyclic_buf = [float(init_value) / order for i in range(order)]
         self.__cbuf_tail = 0  # oldest
@@ -73,7 +86,7 @@ class FilteredTempSensor:
 class ThreadedTS(threading.Thread):
     def __init__(self, ts_file_name):
         threading.Thread.__init__(self)
-        self.__filtered_ts = FilteredTempSensor(ts_file_name, 4)
+        self.__filtered_ts = FilteredTempSensor(ts_file_name, 8)
         self.__filtered_temp = self.__filtered_ts.get_filtered_temp()
         self.__stop_flag = False
 
@@ -104,44 +117,11 @@ class Fan:
         file.write(str(float_speed))
 
 
-class FanSpeedCurveWithHysteresis:
-    LOW_SPEED = 0
-    MED_SPEED = 128
-    HIGH_SPEED = 255
-    HYSTERESIS_GAP = 4
-
-    def __init__(self, temp_range):
-        self.__low_temp_range = temp_range
-        self.__high_temp_range = [temp - FanSpeedCurveWithHysteresis.HYSTERESIS_GAP for temp in temp_range]
-        self.__cur_speed = FanSpeedCurveWithHysteresis.LOW_SPEED
-
-    def calculate_speed(self, temp):
-        mid_temp_point, high_temp_point = self.__pick_temp_range()
-        if temp < mid_temp_point:
-            new_speed = FanSpeedCurveWithHysteresis.LOW_SPEED
-        elif temp < high_temp_point:
-            new_speed = FanSpeedCurveWithHysteresis.MED_SPEED
-        else:
-            new_speed = FanSpeedCurveWithHysteresis.HIGH_SPEED
-        self.__cur_speed = new_speed
-        return new_speed
-
-    def __pick_temp_range(self):
-        if self.__cur_speed == FanSpeedCurveWithHysteresis.LOW_SPEED:
-            mid_temp_point, high_temp_point = self.__low_temp_range
-        elif self.__cur_speed == FanSpeedCurveWithHysteresis.MED_SPEED:
-            mid_temp_point, _ = self.__high_temp_range
-            _, high_temp_point = self.__low_temp_range
-        else:
-            mid_temp_point, high_temp_point = self.__high_temp_range
-        return mid_temp_point, high_temp_point
-
-
 class FanControl:
-    def __init__(self, fan, ts, temp_range):
+    def __init__(self, fan, ts, hyst_curve):
         self.__fan = fan
         self.__ts = ts
-        self.__fan_speed_calc = FanSpeedCurveWithHysteresis(temp_range)
+        self.__fan_speed_calc = hyst_curve
 
     def update_fan_speed_according_to_temp(self):
         temp = self.__ts.temp
@@ -151,13 +131,15 @@ class FanControl:
         self.__fan.set_fan_speed(fan_speed)
 
     def set_max_speed(self):
-        self.__fan.set_fan_speed(FanSpeedCurveWithHysteresis.HIGH_SPEED)
+        max_speed = self.__fan_speed_calc.calculate_speed(100.0)
+        self.__fan.set_fan_speed(max_speed)
 
 
 if __name__ == '__main__':
     ts = ThreadedTS('/sys/class/hwmon/hwmon1/temp1_input')
     fans = [Fan(fan_file) for fan_file in FANS]
-    fan_controls = [FanControl(fan, ts, TEMP_CURVES[idx]) for idx, fan in enumerate(fans)]
+    curves = [HystSpeedCurve(SPEEDS, transition, HYSTERESIS_GAP) for transition in TEMP_TRANSITIONS]
+    fan_controls = [FanControl(fan, ts, curves[idx]) for idx, fan in enumerate(fans)]
 
     def fan_control_stop(sig, frame):
         ts.stop()
