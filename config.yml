@@ -1,0 +1,49 @@
+---
+fan1:
+    type: 'fan'
+    sys_path:       '/sys/class/hwmon/hwmon3/pwm1'
+
+fan2:
+    type: 'fan'
+    sys_path:       '/sys/class/hwmon/hwmon3/pwm2'
+
+temp_sensor1:
+    type: 'temp_sensor'
+    sys_path:       '/sys/class/hwmon/hwmon1/temp1_input'
+    filter_order:   8
+    poll_period:    1 #seconds
+
+hyst_curve1:
+    type: 'hyst_curve'
+    transition_temps:
+        - 45
+        - 60
+    speed_zones:
+        - 0
+        - 128
+        - 255
+    hyst_gap: 5
+
+hyst_curve2:
+    type: 'hyst_curve'
+    transition_temps:
+        - 50
+        - 65
+    speed_zones:
+        - 0
+        - 128
+        - 255
+    hyst_gap: 5
+
+fan_control1:
+    type: 'fan_control'
+    fan: 'fan1'
+    curve: 'hyst_curve1'
+    ts: 'temp_sensor1'
+
+fan_control2:
+    type: 'fan_control'
+    fan: 'fan2'
+    curve: 'hyst_curve2'
+    ts: 'temp_sensor1'
+...
