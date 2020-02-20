@@ -7,7 +7,7 @@ import time
 
 from fan_control_system import FanControlSystem
 
-DEBUG_STUBS = True
+DEBUG_STUBS = False
 
 if __name__ == '__main__':
     fan_control_system = FanControlSystem('config.yml', DEBUG_STUBS)
