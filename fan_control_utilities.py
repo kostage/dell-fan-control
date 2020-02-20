@@ -2,6 +2,7 @@
 
 
 import signal
+from statistics import mean
 import sys
 import time
 import threading
@@ -67,44 +68,34 @@ class AveragingFilter:
         return self.__filtered_value
 
 
-class FilteredTempSensor:
-    def __init__(self, file_name_str, filter_order):
-        self.__file_name_str = file_name_str
-        temp = self.__read_temp_from_file()
-        self.__filter = AveragingFilter(filter_order, temp)
+class SysTempSensorPackage:
+    def __init__(self, ts_file_name_list):
+        self.__ts_file_name_list = ts_file_name_list
 
-    def __read_temp_from_file(self):
-        file = open(self.__file_name_str)
+    def get_average_of_sensor_temps(self):
+        return mean([self.__read_temp_from_file(ts_file) for ts_file in self.__ts_file_name_list])
+
+    def __read_temp_from_file(self, file_name):
+        file = open(file_name)
         str_temp_value = file.readline()
         return float(str_temp_value) / 1000
 
+
+class FilteredTempSensor:
+    def __init__(self, ts_file_name_list, filter_order):
+        self.__sys_temp_sensor_package = SysTempSensorPackage(ts_file_name_list)
+        temp = self.__sys_temp_sensor_package.get_average_of_sensor_temps()
+        self.__filter = AveragingFilter(filter_order, temp)
+
     def get_filtered_temp(self):
-        temp = self.__read_temp_from_file()
+        temp = self.__sys_temp_sensor_package.get_average_of_sensor_temps()
         return self.__filter.filter_value(temp)
 
 
-class TempSensorStub(TempSensorBase):
-    def __init__(self, ts_file_name, filter_order, period):
-        self.__ts_file_name = ts_file_name
-        print('TempSensorStub for', ts_file_name, 'with filter order = ', filter_order, ', period = ', period)
-
-    def start(self):
-        print('TempSensorStub for', self.__ts_file_name, 'started')
-
-    def stop(self):
-        print('TempSensorStub for', self.__ts_file_name, 'stopped')
-
-    def __del__(self):
-        self.stop()
-
-    def get_temp(self):
-        return 0
-
-
 class ThreadedTS(TempSensorBase):
-    def __init__(self, ts_file_name, filter_order, period):
+    def __init__(self, ts_file_name_list, filter_order, period):
         self.__thread = threading.Thread(target=self.__thread_func)
-        self.__filtered_ts = FilteredTempSensor(ts_file_name, filter_order)
+        self.__filtered_ts = FilteredTempSensor(ts_file_name_list, filter_order)
         self.__filtered_temp = self.__filtered_ts.get_filtered_temp()
         self.__period = period
         self.__stop_flag = False
@@ -130,6 +121,16 @@ class ThreadedTS(TempSensorBase):
 
     def get_temp(self):
         return self.__filtered_temp
+
+
+class TempSensorStub(ThreadedTS):
+    def __init__(self, ts_file_name_list, filter_order, period):
+        super().__init__(ts_file_name_list, filter_order, period)
+
+    def get_temp(self):
+        temp = super().get_temp()
+        print('Temperature read:', temp)
+        return temp
 
 
 class FanStub(FanBase):

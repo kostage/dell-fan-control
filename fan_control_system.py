@@ -28,13 +28,13 @@ class TempSensorBuilder:
         self.__type = type
 
     def build(self, obj_attrs):
-        sys_file_name = obj_attrs['sys_path']
+        sys_file_name_list = obj_attrs['sys_path_list']
         order = obj_attrs['filter_order']
         period = obj_attrs['poll_period']
-        return self.__build(sys_file_name, order, period)
+        return self.__build(sys_file_name_list, order, period)
 
-    def __build(self, sys_file_name, order, period):
-        return self.__type(sys_file_name, order, period)
+    def __build(self, sys_file_name_list, order, period):
+        return self.__type(sys_file_name_list, order, period)
 
 
 class HystCurveBuilder:

@@ -9,8 +9,14 @@ fan2:
 
 temp_sensor1:
     type: 'temp_sensor'
-    sys_path:       '/sys/class/hwmon/hwmon1/temp1_input'
-    filter_order:   8
+    sys_path_list:
+        - '/sys/class/hwmon/hwmon1/temp2_input'
+        - '/sys/class/hwmon/hwmon1/temp3_input'
+        - '/sys/class/hwmon/hwmon1/temp4_input'
+        - '/sys/class/hwmon/hwmon1/temp5_input'
+        - '/sys/class/hwmon/hwmon1/temp6_input'
+        - '/sys/class/hwmon/hwmon1/temp7_input'
+    filter_order:   6
     poll_period:    1 #seconds
 
 hyst_curve1:
